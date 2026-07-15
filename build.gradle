@@ -1,0 +1,106 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+
+version = release_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+def xaeroDevModsDir = providers.gradleProperty('xaero_dev_mods_dir')
+        .orElse("${System.getProperty('user.home')}/AppData/Roaming/.minecraft/versions/Civitas/mods")
+def xaeroMinimapJars = fileTree(xaeroDevModsDir) {
+    include "xaerominimap-neoforge-${minecraft_version}-*.jar"
+}
+def xaeroWorldMapJars = fileTree(xaeroDevModsDir) {
+    include "xaeroworldmap-neoforge-${minecraft_version}-*.jar"
+}
+def xaeroLibCompileDir = layout.buildDirectory.dir('xaero-dev')
+def xaeroLibCompileJars = fileTree(xaeroLibCompileDir) {
+    include "xaerolib-neoforge-${minecraft_version}-*.jar"
+}
+def extractXaeroLib = tasks.register('extractXaeroLib', Sync) {
+    from({ xaeroWorldMapJars.collect { zipTree(it) } }) {
+        include "META-INF/jarjar/xaerolib-neoforge-${minecraft_version}-*.jar"
+        eachFile { details -> details.path = details.name }
+        includeEmptyDirs = false
+    }
+    into xaeroLibCompileDir
+}
+
+dependencies {
+    compileOnly files(
+            xaeroMinimapJars,
+            xaeroWorldMapJars,
+            xaeroLibCompileJars
+    )
+    def xaeroRuntime = providers.gradleProperty('xaero_runtime').orElse('none').get()
+    if (xaeroRuntime in ['minimap', 'both']) runtimeOnly xaeroMinimapJars
+    if (xaeroRuntime in ['worldmap', 'both']) runtimeOnly xaeroWorldMapJars
+    testImplementation platform('org.junit:junit-bom:5.12.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+sourceSets.main.resources {
+    srcDir('src/generated/resources')
+}
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            if (providers.gradleProperty('quick_world').isPresent()) {
+                programArgument '--quickPlaySingleplayer'
+                programArgument providers.gradleProperty('quick_world').get()
+            }
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+            sourceSet(sourceSets.test)
+        }
+    }
+
+    unitTest {
+        testedMod = mods."${mod_id}"
+        enable()
+    }
+}
+
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+
+sourceSets.main.resources.srcDir(generateModMetadata)
+neoForge.ideSyncTask(generateModMetadata)
+
+tasks.withType(JavaCompile).configureEach {
+    dependsOn extractXaeroLib
+    options.encoding = 'UTF-8'
+}

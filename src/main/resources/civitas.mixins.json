@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "package": "com.seaquake6324.civitas.compat.xaero.mixin",
+  "plugin": "com.seaquake6324.civitas.compat.xaero.CivitasMixinPlugin",
+  "client": [
+    "minimap.MinimapHighlighterRegistryMixin",
+    "minimap.MinimapInfoDisplayMixin",
+    "worldmap.WorldMapHighlighterRegistryMixin",
+    "worldmap.GuiMapMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

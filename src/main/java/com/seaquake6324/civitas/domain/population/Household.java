@@ -1,0 +1,16 @@
+package com.seaquake6324.civitas.domain.population;
+
+import java.util.Set;
+import java.util.UUID;
+
+public record Household(UUID id,UUID cityId,Set<FamilyMemberRef> partners,Set<FamilyMemberRef> historicalPartners,Set<FamilyMemberRef> guardians,Set<UUID> children,UUID residenceId,
+        int foodCoverage,int housingCoverage,long revision){
+    public Household{partners=Set.copyOf(partners);historicalPartners=Set.copyOf(historicalPartners);guardians=Set.copyOf(guardians);children=Set.copyOf(children);if(partners.size()>2||historicalPartners.size()>2)throw new IllegalArgumentException("single-spouse household has more than two partner records");if(guardians.size()>2)throw new IllegalArgumentException("household has more than two active guardians");if(children.size()>256)throw new IllegalArgumentException("household child safety cap exceeded");if(!java.util.Collections.disjoint(partners,historicalPartners))throw new IllegalArgumentException("active and historical partners overlap");if(children.isEmpty()&&!guardians.isEmpty())throw new IllegalArgumentException("childless household cannot retain guardians");foodCoverage=clamp(foodCoverage);housingCoverage=clamp(housingCoverage);revision=Math.max(0,revision);}
+    public Household(UUID id,UUID cityId,Set<FamilyMemberRef>partners,Set<FamilyMemberRef>historicalPartners,Set<UUID>children,UUID residenceId,int foodCoverage,int housingCoverage,long revision){this(id,cityId,partners,historicalPartners,children.isEmpty()?Set.of():partners,children,residenceId,foodCoverage,housingCoverage,revision);}
+    public Household(UUID id,UUID cityId,Set<FamilyMemberRef>partners,Set<UUID>children,UUID residenceId,int foodCoverage,int housingCoverage,long revision){this(id,cityId,partners,Set.of(),children.isEmpty()?Set.of():partners,children,residenceId,foodCoverage,housingCoverage,revision);}
+    public Household addChild(UUID child,Set<FamilyMemberRef>newGuardians){Set<UUID>nextChildren=new java.util.HashSet<>(children);nextChildren.add(child);Set<FamilyMemberRef>nextGuardians=new java.util.HashSet<>(guardians);nextGuardians.addAll(newGuardians);return new Household(id,cityId,partners,historicalPartners,nextGuardians,nextChildren,residenceId,foodCoverage,housingCoverage,revision+1);}
+    public Household removeChild(UUID child){Set<UUID>nextChildren=new java.util.HashSet<>(children);nextChildren.remove(child);return new Household(id,cityId,partners,historicalPartners,nextChildren.isEmpty()?Set.of():guardians,nextChildren,residenceId,foodCoverage,housingCoverage,revision+1);}
+    public Household withGuardians(Set<FamilyMemberRef>nextGuardians){return new Household(id,cityId,partners,historicalPartners,nextGuardians,children,residenceId,foodCoverage,housingCoverage,revision+1);}
+    public Household recordPartnerDeath(FamilyMemberRef deceased){if(!partners.contains(deceased))return this;Set<FamilyMemberRef>history=new java.util.HashSet<>(historicalPartners);history.addAll(partners);Set<FamilyMemberRef>nextGuardians=new java.util.HashSet<>(guardians);nextGuardians.remove(deceased);return new Household(id,cityId,Set.of(),history,nextGuardians,children,residenceId,foodCoverage,housingCoverage,revision+1);}
+    private static int clamp(int value){return Math.max(0,Math.min(100,value));}
+}

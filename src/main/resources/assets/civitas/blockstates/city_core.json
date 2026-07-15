@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "civitas:block/city_core" }
+  }
+}

@@ -1,0 +1,14 @@
+package com.seaquake6324.civitas.domain.population;
+
+import static org.junit.jupiter.api.Assertions.*;
+import java.util.Map;import java.util.Set;import java.util.UUID;import org.junit.jupiter.api.Test;
+
+class PopulationRulesTest{
+ @Test void fiveAgeStagesExposeRawTicksAndNextBoundary(){AgeRules rules=new AgeRules(24000,12,18,35,60);assertEquals(AgeStage.CHILD,rules.evaluate(0).stage());assertEquals(AgeStage.ADOLESCENT,rules.evaluate(12L*24000).stage());assertEquals(AgeStage.YOUNG_ADULT,rules.evaluate(18L*24000).stage());assertEquals(AgeStage.MATURE_ADULT,rules.evaluate(35L*24000).stage());assertEquals(AgeStage.ELDER,rules.evaluate(60L*24000).stage());assertEquals(24000,rules.evaluate(17L*24000).ticksToNextStage());}
+ @Test void agingUsesOnlyPersistedServerGameTimeDelta(){CitizenRecord citizen=citizen(10,100);CitizenRecord advanced=citizen.advanceAge(160);assertEquals(70,advanced.ageTicks());assertEquals(160,advanced.lastAgeUpdateTick());assertEquals(11,advanced.revision());assertEquals(70,advanced.advanceAge(120).ageTicks());}
+ @Test void deterministicNamesCoverConfiguredCulturesWithoutGameplayData(){var a=CitizenNameGenerator.generate(42,Gender.FEMALE);var b=CitizenNameGenerator.generate(42,Gender.FEMALE);assertEquals(a,b);assertNotNull(a.region());assertFalse(a.given().isBlank());assertFalse(a.family().isBlank());}
+ @Test void summaryRetainsCompleteExplainableBreakdown(){UUID city=UUID.randomUUID();CitizenRecord one=citizen(18L*24000,0,city,Gender.MALE,CitizenRace.HUMAN);CitizenRecord two=citizen(61L*24000,0,city,Gender.FEMALE,CitizenRace.SHEEPFOLK);PopulationSummary summary=PopulationSummary.from(city,java.util.List.of(one,two),new AgeRules(24000,12,18,35,60));assertEquals(2,summary.total());assertEquals(1,summary.genders().get(Gender.MALE));assertEquals(1,summary.ages().get(AgeStage.ELDER));assertEquals(1,summary.races().get(CitizenRace.SHEEPFOLK));}
+ @Test void lifespanIsStableBoundedAndDeathIsIrreversible(){UUID id=UUID.randomUUID();LifespanRules rules=new LifespanRules(60,90);assertEquals(rules.years(id),rules.years(id));assertTrue(rules.years(id)>=60&&rules.years(id)<=90);CitizenRecord citizen=new CitizenRecord(id,"Erik","Berg",CitizenRace.HUMAN,"human_0",Gender.MALE,90L*24000,0,UUID.randomUUID(),null,null,null,"",100,CitizenNeeds.neutral(),Map.of(),Set.of(),50,0,CitizenRuntimeState.VIRTUAL,0,90,0,1);CitizenRecord dead=citizen.dieOfOldAge(100);assertFalse(dead.alive());assertEquals(0,dead.health());assertEquals(dead,dead.dieOfOldAge(200));}
+ private static CitizenRecord citizen(long age,long updated){return citizen(age,updated,UUID.randomUUID(),Gender.MALE,CitizenRace.HUMAN);}
+ private static CitizenRecord citizen(long age,long updated,UUID city,Gender gender,CitizenRace race){return new CitizenRecord(UUID.randomUUID(),"Erik","Berg",race,race.name().toLowerCase()+"_0",gender,age,updated,city,null,null,null,"",100,CitizenNeeds.neutral(),Map.of(),Set.of(),50,0,CitizenRuntimeState.VIRTUAL,0,10);}
+}

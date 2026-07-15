@@ -1,0 +1,3 @@
+package com.seaquake6324.civitas.infrastructure.network;
+import com.seaquake6324.civitas.CivitasMod;import net.minecraft.network.RegistryFriendlyByteBuf;import net.minecraft.network.codec.StreamCodec;import net.minecraft.network.protocol.common.custom.CustomPacketPayload;import net.minecraft.resources.Identifier;
+public record OpenGenderSelectionPayload()implements CustomPacketPayload{public static final Type<OpenGenderSelectionPayload>TYPE=new Type<>(Identifier.fromNamespaceAndPath(CivitasMod.MOD_ID,"open_gender_selection"));public static final StreamCodec<RegistryFriendlyByteBuf,OpenGenderSelectionPayload>STREAM_CODEC=StreamCodec.unit(new OpenGenderSelectionPayload());@Override public Type<? extends CustomPacketPayload>type(){return TYPE;}}

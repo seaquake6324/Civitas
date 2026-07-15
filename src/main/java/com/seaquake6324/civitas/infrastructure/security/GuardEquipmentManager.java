@@ -1,0 +1,11 @@
+package com.seaquake6324.civitas.infrastructure.security;
+
+import com.seaquake6324.civitas.infrastructure.entity.CitizenEntity;import com.seaquake6324.civitas.infrastructure.persistence.*;import java.util.UUID;import net.minecraft.core.component.DataComponents;import net.minecraft.network.chat.Component;import net.minecraft.server.level.ServerPlayer;import net.minecraft.tags.ItemTags;import net.minecraft.world.InteractionHand;import net.minecraft.world.entity.EquipmentSlot;import net.minecraft.world.item.*;
+
+/** Real item transfer for guard equipment; no abstract inventory is created. */
+public final class GuardEquipmentManager {
+    public static boolean tryEquip(ServerPlayer player,CitizenEntity entity,InteractionHand hand){if(!player.isShiftKeyDown())return false;UUID citizenId=entity.citizenId().orElse(null);var citizen=citizenId==null?null:PopulationSavedData.get(player.level().getServer()).citizen(citizenId).orElse(null);var city=citizen==null||citizen.cityId()==null?null:CitySavedData.get(player.level().getServer()).byId(citizen.cityId()).orElse(null);if(city==null||!city.mayManage(player.getUUID()))return false;ItemStack offered=player.getItemInHand(hand);if(offered.isEmpty())return false;EquipmentSlot slot=slot(entity,offered);if(slot==null)return false;ItemStack one=offered.copyWithCount(1),previous=entity.getItemBySlot(slot).copy();entity.setItemSlot(slot,one);if(!player.isCreative())offered.shrink(1);if(!previous.isEmpty()&&!player.getInventory().add(previous))player.drop(previous,false);CitizenEquipmentSavedData.get(player.level().getServer()).capture(entity,citizen.revision());player.sendSystemMessage(Component.translatable("civitas.guard.equipped",one.getHoverName()),true);return true;}
+    private static EquipmentSlot slot(CitizenEntity entity,ItemStack stack){if(isWeapon(stack))return EquipmentSlot.MAINHAND;if(stack.is(Items.SHIELD))return EquipmentSlot.OFFHAND;EquipmentSlot slot=entity.getEquipmentSlotForItem(stack);return stack.has(DataComponents.EQUIPPABLE)&&slot.getType()==EquipmentSlot.Type.HUMANOID_ARMOR?slot:null;}
+    private static boolean isWeapon(ItemStack stack){return stack.is(ItemTags.SWORDS)||stack.is(ItemTags.AXES)||stack.is(ItemTags.BOW_ENCHANTABLE)||stack.is(ItemTags.CROSSBOW_ENCHANTABLE)||stack.is(ItemTags.TRIDENT_ENCHANTABLE);}
+    private GuardEquipmentManager(){}
+}

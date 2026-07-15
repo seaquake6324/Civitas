@@ -1,0 +1,3 @@
+package com.seaquake6324.civitas.domain.population;
+import static org.junit.jupiter.api.Assertions.*;import java.util.UUID;import org.junit.jupiter.api.Test;
+class ReproductionConsentTest{@Test void onlyPlayersCanCreateBoundedConsent(){var a=FamilyMemberRef.player(UUID.randomUUID());var b=FamilyMemberRef.player(UUID.randomUUID());var value=new ReproductionConsent(UUID.randomUUID(),UUID.randomUUID(),a,b,10,20,1);assertTrue(value.involves(a));assertThrows(IllegalArgumentException.class,()->new ReproductionConsent(UUID.randomUUID(),UUID.randomUUID(),a,FamilyMemberRef.citizen(UUID.randomUUID()),10,20,1));}}
